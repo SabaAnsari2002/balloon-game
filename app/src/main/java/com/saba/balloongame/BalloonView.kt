@@ -17,6 +17,16 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
         style = Paint.Style.FILL
     }
     private var score = 0
+    private var speed = 10 // سرعت اولیه
+    private var lastSpeedChangeTime = System.currentTimeMillis()
+
+    // تعریف رنگ‌ها به صورت مقادیر صحیح
+    private val balloonColors = intArrayOf(
+        Color.parseColor("#ABFFF9"), Color.parseColor("#A075D5"), Color.parseColor("#F5A9ED"),
+        Color.parseColor("#FF8E8E"), Color.parseColor("#FFFD86"), Color.parseColor("#B8FF79"),
+        Color.parseColor("#8EADFF"), Color.parseColor("#8E9AFF"), Color.parseColor("#8F7BC8"),
+        Color.parseColor("#99EEFF")
+    )
 
     init {
         // تولید بادکنک‌های اولیه
@@ -31,7 +41,7 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
                 val balloonsToRemove = mutableListOf<Balloon>()
                 val balloonsToAdd = mutableListOf<Balloon>()
                 for (balloon in balloons) {
-                    balloon.y -= 10 // سرعت حرکت بادکنک‌ها
+                    balloon.y -= speed // سرعت حرکت بادکنک‌ها
                     if (balloon.y < 0) {
                         balloonsToRemove.add(balloon)
                         balloonsToAdd.add(generateRandomBalloon())
@@ -40,6 +50,14 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
                 balloons.removeAll(balloonsToRemove)
                 balloons.addAll(balloonsToAdd)
                 invalidate()
+
+                // افزایش سرعت هر ۱۵ ثانیه
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastSpeedChangeTime >= 15000) {
+                    speed += 5 // افزایش سرعت
+                    lastSpeedChangeTime = currentTime
+                }
+
                 handler.postDelayed(this, 50) // به‌روزرسانی هر 50 میلی‌ثانیه
             }
         })
@@ -86,7 +104,7 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             x = Random.nextFloat() * width,
             y = height.toFloat(),
             radius = 50f + Random.nextFloat() * 50f,
-            color = Color.rgb(Random.nextInt(256), Random.nextInt(256), Random.nextInt(256))
+            color = balloonColors[Random.nextInt(balloonColors.size)]
         )
     }
 
