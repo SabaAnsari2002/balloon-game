@@ -56,7 +56,7 @@ fun GameOverScreen(onRestartClick: () -> Unit) {
         modifier = Modifier.fillMaxSize()
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "گیم اور", fontSize = 30.sp)
+            Text(text = "Game Over", fontSize = 30.sp)
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = onRestartClick) {
                 Text(text = "شروع مجدد")
