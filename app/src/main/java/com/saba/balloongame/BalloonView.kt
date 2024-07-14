@@ -19,6 +19,8 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     private var score = 0
     private var speed = 10 // سرعت اولیه
     private var lastSpeedChangeTime = System.currentTimeMillis()
+    private var missedBalloonsCount = 0 // شمارش بادکنک‌های نترکیده و خارج شده
+    var onGameOver: (() -> Unit)? = null // تعریف یک تابع برای هندل کردن پایان بازی
 
     // تعریف رنگ‌ها به صورت مقادیر صحیح
     private val balloonColors = intArrayOf(
@@ -29,26 +31,32 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     )
 
     init {
-        // تولید بادکنک‌های اولیه
-        for (i in 1..10) {
-            balloons.add(generateRandomBalloon())
-        }
-
+        resetGame()
         // تنظیم انیمیشن حرکت بادکنک‌ها
         val handler = Handler()
         handler.post(object : Runnable {
             override fun run() {
+                if (missedBalloonsCount >= 5) {
+                    onGameOver?.invoke()
+                    return
+                }
+
                 val balloonsToRemove = mutableListOf<Balloon>()
-                val balloonsToAdd = mutableListOf<Balloon>()
                 for (balloon in balloons) {
                     balloon.y -= speed // سرعت حرکت بادکنک‌ها
-                    if (balloon.y < 0) {
+                    if (balloon.y + balloon.radius < 0) {
                         balloonsToRemove.add(balloon)
-                        balloonsToAdd.add(generateRandomBalloon())
+                        missedBalloonsCount++
+                        if (missedBalloonsCount >= 5) {
+                            onGameOver?.invoke()
+                            return
+                        }
                     }
                 }
                 balloons.removeAll(balloonsToRemove)
-                balloons.addAll(balloonsToAdd)
+                while (balloons.size < 10) {
+                    balloons.add(generateRandomBalloon())
+                }
                 invalidate()
 
                 // افزایش سرعت هر ۱۵ ثانیه
@@ -70,29 +78,24 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             paint.color = balloon.color
             canvas.drawCircle(balloon.x, balloon.y, balloon.radius, paint)
         }
-        // نمایش امتیاز
+        // نمایش امتیاز و تعداد بادکنک‌های نترکیده
         paint.color = Color.BLACK
         paint.textSize = 50f
         canvas.drawText("Score: $score", 50f, 50f, paint)
+        canvas.drawText("Missed: $missedBalloonsCount", 50f, 110f, paint)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN) {
             // بررسی ترکاندن بادکنک
             val iterator = balloons.iterator()
-            val balloonsToRemove = mutableListOf<Balloon>()
             while (iterator.hasNext()) {
                 val balloon = iterator.next()
                 if (balloon.contains(event.x, event.y)) {
-                    balloonsToRemove.add(balloon)
+                    iterator.remove()
                     score++
                     break
                 }
-            }
-            balloons.removeAll(balloonsToRemove)
-            // اضافه کردن بادکنک جدید
-            if (balloons.size < 10) {
-                balloons.add(generateRandomBalloon())
             }
             invalidate()
         }
@@ -100,12 +103,25 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     }
 
     private fun generateRandomBalloon(): Balloon {
-        return Balloon(
-            x = Random.nextFloat() * width,
-            y = height.toFloat(),
-            radius = 50f + Random.nextFloat() * 50f,
-            color = balloonColors[Random.nextInt(balloonColors.size)]
-        )
+        val radius = 50f + Random.nextFloat() * 50f
+        val x = radius + Random.nextFloat() * (width - 2 * radius)
+        val y = height.toFloat() + radius // از پایین صفحه وارد شود
+        return Balloon(x, y, radius, balloonColors[Random.nextInt(balloonColors.size)])
+    }
+
+    fun resetGame() {
+        score = 0
+        speed = 10
+        missedBalloonsCount = 0
+        balloons.clear()
+        // اطمینان از اینکه View اندازه‌گیری شده است
+        post {
+            for (i in 1..10) {
+                balloons.add(generateRandomBalloon())
+            }
+            invalidate()
+        }
+        lastSpeedChangeTime = System.currentTimeMillis()
     }
 
     data class Balloon(var x: Float, var y: Float, val radius: Float, val color: Int) {
