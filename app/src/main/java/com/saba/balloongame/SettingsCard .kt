@@ -3,24 +3,23 @@ package com.saba.balloongame
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.media.MediaPlayer
-
 @Composable
 fun SettingsCard(
     onBackToGame: () -> Unit,
     onRestartGame: () -> Unit,
-    mediaPlayer: MediaPlayer
+    mediaPlayer: MediaPlayer,
+    onMusicStatusChanged: (Boolean) -> Unit,
+    isMuted: Boolean,
+    onMuteStatusChanged: (Boolean) -> Unit
 ) {
-    val volume = remember { mutableStateOf(0.5f) }
+    val muteState = remember { mutableStateOf(isMuted) }
 
     Box(
         contentAlignment = Alignment.Center,
@@ -36,23 +35,31 @@ fun SettingsCard(
                 Text(text = "Settings", fontSize = 24.sp)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(text = "Volume", fontSize = 18.sp)
-                Slider(
-                    value = volume.value,
-                    onValueChange = {
-                        volume.value = it
-                        mediaPlayer.setVolume(it, it)
-                    },
-                    valueRange = 0f..1f,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+                Button(onClick = {
+                    muteState.value = !muteState.value
+                    onMuteStatusChanged(muteState.value)
+                    if (muteState.value) {
+                        mediaPlayer.pause()
+                        onMusicStatusChanged(false)
+                    } else {
+                        onMusicStatusChanged(true) // Ensure music continues to play when returning to game
+                    }
+                }) {
+                    Text(if (muteState.value) "Unmute" else "Mute")
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onBackToGame) {
+                Button(onClick = {
+                    onBackToGame()
+                    if (!muteState.value) onMusicStatusChanged(true) // Ensure music continues to play when returning to game
+                }) {
                     Text("Back to Game")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onRestartGame) {
+                Button(onClick = {
+                    onRestartGame()
+                    if (!muteState.value) onMusicStatusChanged(true) // Ensure music continues to play when restarting game
+                }) {
                     Text("Restart Game")
                 }
             }

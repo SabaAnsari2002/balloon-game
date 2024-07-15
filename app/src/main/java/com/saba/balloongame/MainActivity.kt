@@ -11,9 +11,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.saba.balloongame.ui.theme.BalloonGameTheme
 import kotlinx.coroutines.delay
-
 class MainActivity : ComponentActivity() {
     private lateinit var mediaPlayer: MediaPlayer
+    private var isMusicPlaying by mutableStateOf(false) // متغیر برای ذخیره وضعیت پخش موسیقی
+    private var isMuted by mutableStateOf(false) // وضعیت سراسری برای حالت میوت
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,25 +42,48 @@ class MainActivity : ComponentActivity() {
                         gameOver -> GameOverScreen(onRestartClick = {
                             gameOver = false
                             startGame = true
-                            mediaPlayer.start() // Start music
+                            if (!isMuted) {
+                                mediaPlayer.start() // Start music
+                                isMusicPlaying = true
+                            }
                         })
                         startGame -> BalloonGameScreen(
                             onGameOver = {
                                 gameOver = true
                                 startGame = false
                                 mediaPlayer.pause() // Pause music
+                                isMusicPlaying = false
                             },
                             onPause = {
                                 mediaPlayer.pause() // Pause music
+                                isMusicPlaying = false
                             },
                             onResume = {
-                                mediaPlayer.start() // Resume music
+                                if (!isMuted) {
+                                    mediaPlayer.start() // Resume music only if not muted
+                                    isMusicPlaying = true
+                                }
                             },
-                            mediaPlayer = mediaPlayer
+                            mediaPlayer = mediaPlayer,
+                            onMusicStatusChanged = { isPlaying ->
+                                isMusicPlaying = isPlaying
+                            },
+                            isMuted = isMuted,
+                            onMuteStatusChanged = { mute ->
+                                isMuted = mute
+                                if (mute) {
+                                    mediaPlayer.pause()
+                                } else if (isMusicPlaying) {
+                                    mediaPlayer.start()
+                                }
+                            }
                         )
                         else -> HomeScreen(onStartClick = {
                             startGame = true
-                            mediaPlayer.start() // Start music
+                            if (!isMuted) {
+                                mediaPlayer.start() // Start music
+                                isMusicPlaying = true
+                            }
                         })
                     }
                 }
