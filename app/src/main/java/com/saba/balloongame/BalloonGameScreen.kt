@@ -1,22 +1,69 @@
 package com.saba.balloongame
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.saba.balloongame.BalloonView
 
 @Composable
-fun BalloonGameScreen(onGameOver: () -> Unit) {
+fun BalloonGameScreen(
+    onGameOver: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit
+) {
     val context = LocalContext.current
-    AndroidView(
-        factory = {
-            BalloonView(context).apply {
-                this.onGameOver = onGameOver
-                resetGame()
-            }
-        },
-        modifier = Modifier.fillMaxSize()
-    )
+    var gamePaused by remember { mutableStateOf(false) }
+    var balloonView by remember { mutableStateOf<BalloonView?>(null) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        AndroidView(
+            factory = {
+                BalloonView(context).apply {
+                    this.onGameOver = onGameOver
+                    this.onPause = {
+                        gamePaused = true
+                        onPause()
+                    }
+                    this.onResume = {
+                        gamePaused = false
+                        onResume()
+                    }
+                    balloonView = this
+                    resetGame()
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        if (gamePaused) {
+            SettingsCard(
+                onBackToGame = {
+                    gamePaused = false
+                    balloonView?.resumeGame()
+                },
+                onRestartGame = {
+                    gamePaused = false
+                    balloonView?.resetGame()
+                }
+            )
+        }
+
+        Button(
+            onClick = {
+                gamePaused = true
+                balloonView?.pauseGame()
+                onPause()
+            },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+        ) {
+            Text("Settings")
+        }
+    }
 }
