@@ -47,7 +47,7 @@ fun HomeScreen(onStartClick: () -> Unit) {
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.padding(8.dp)
             ) {
-                Text(text = "شروع بازی", fontSize = 18.sp)
+                Text(text = "start", fontSize = 18.sp)
             }
         }
     }

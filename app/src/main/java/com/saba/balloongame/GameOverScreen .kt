@@ -46,7 +46,7 @@ fun GameOverScreen(onRestartClick: () -> Unit) {
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.padding(8.dp)
             ) {
-                Text(text = "شروع مجدد", fontSize = 18.sp)
+                Text(text = "restart", fontSize = 18.sp)
             }
         }
     }
