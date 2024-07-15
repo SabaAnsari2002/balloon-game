@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.os.Handler
 import android.util.AttributeSet
 import android.view.MotionEvent
@@ -110,17 +111,60 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
         // Draw balloons
         for (balloon in balloons) {
+            // Draw balloon body (oval shape)
             paint.color = balloon.color
-            canvas.drawCircle(balloon.x, balloon.y, balloonRadius, paint)
+            val rectF = RectF(
+                balloon.x - balloonRadius,
+                balloon.y - balloonRadius * 1.2f,
+                balloon.x + balloonRadius,
+                balloon.y + balloonRadius * 1.2f
+            )
+            canvas.drawOval(rectF, paint)
+
+            // Draw balloon string
+            paint.color = Color.DKGRAY
+            paint.strokeWidth = 5f
+            canvas.drawLine(balloon.x, balloon.y + balloonRadius * 1.2f, balloon.x, balloon.y + balloonRadius * 1.2f + 100f, paint)
+
+            // Draw balloon highlight
+            paint.color = Color.WHITE
+            paint.style = Paint.Style.FILL
+            val highlightRadius = balloonRadius / 4
+            canvas.drawOval(
+                RectF(
+                    balloon.x - highlightRadius,
+                    balloon.y - balloonRadius * 0.8f - highlightRadius,
+                    balloon.x - highlightRadius / 2,
+                    balloon.y - balloonRadius * 0.8f + highlightRadius / 2
+                ),
+                paint
+            )
+
+            // Draw balloon shadow
+            paint.color = Color.GRAY
+            paint.alpha = 50
+            canvas.drawOval(
+                RectF(
+                    balloon.x - balloonRadius,
+                    balloon.y - balloonRadius * 1.2f + 10,
+                    balloon.x + balloonRadius,
+                    balloon.y + balloonRadius * 1.2f + 10
+                ),
+                paint
+            )
+            paint.alpha = 255 // Reset alpha
         }
+
         // Display score and missed balloons count
         paint.color = Color.BLACK
         paint.textSize = 50f
         canvas.drawText("Score: $score", 50f, 50f, paint)
         canvas.drawText("Missed: $missedBalloonsCount", 50f, 110f, paint)
     }
+
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN && !isGamePaused) {
