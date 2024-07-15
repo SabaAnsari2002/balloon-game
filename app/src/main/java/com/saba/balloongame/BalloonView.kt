@@ -313,7 +313,7 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             // Increase speed every 15 seconds
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastSpeedChangeTime >= 10000) {
-                speed += 2 // Increase speed
+                speed += 4 // Increase speed
                 lastSpeedChangeTime = currentTime
             }
 
