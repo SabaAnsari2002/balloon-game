@@ -1,5 +1,6 @@
 package com.saba.balloongame
 
+import android.media.MediaPlayer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,6 +13,8 @@ import com.saba.balloongame.ui.theme.BalloonGameTheme
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
+    private lateinit var mediaPlayer: MediaPlayer
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -25,6 +28,10 @@ class MainActivity : ComponentActivity() {
                     showSplashScreen = false
                 }
 
+                // Initialize media player
+                mediaPlayer = MediaPlayer.create(this, R.raw.gamesound)
+                mediaPlayer.isLooping = true
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -34,19 +41,34 @@ class MainActivity : ComponentActivity() {
                         gameOver -> GameOverScreen(onRestartClick = {
                             gameOver = false
                             startGame = true
+                            mediaPlayer.start() // Start music
                         })
                         startGame -> BalloonGameScreen(
                             onGameOver = {
                                 gameOver = true
                                 startGame = false
+                                mediaPlayer.pause() // Pause music
                             },
-                            onPause = { /* Handle pause logic here */ },
-                            onResume = { /* Handle resume logic here */ }
+                            onPause = {
+                                mediaPlayer.pause() // Pause music
+                            },
+                            onResume = {
+                                mediaPlayer.start() // Resume music
+                            },
+                            mediaPlayer = mediaPlayer
                         )
-                        else -> HomeScreen(onStartClick = { startGame = true })
+                        else -> HomeScreen(onStartClick = {
+                            startGame = true
+                            mediaPlayer.start() // Start music
+                        })
                     }
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaPlayer.release()
     }
 }

@@ -9,12 +9,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import android.media.MediaPlayer
 
 @Composable
 fun BalloonGameScreen(
     onGameOver: () -> Unit,
     onPause: () -> Unit,
-    onResume: () -> Unit
+    onResume: () -> Unit,
+    mediaPlayer: MediaPlayer
 ) {
     val context = LocalContext.current
     var gamePaused by remember { mutableStateOf(false) }
@@ -49,7 +51,8 @@ fun BalloonGameScreen(
                 onRestartGame = {
                     gamePaused = false
                     balloonView?.resetGame()
-                }
+                },
+                mediaPlayer = mediaPlayer
             )
         }
 
