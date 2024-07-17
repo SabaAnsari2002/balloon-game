@@ -2,6 +2,7 @@ package com.saba.balloongame
 
 import MusicLifecycleObserver
 import android.app.Activity
+import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -17,6 +18,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.LifecycleOwner
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -173,6 +175,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 
 
 
+
+import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.delay
+
 @Composable
 fun BalloonGameScreen(
     onGameOver: () -> Unit,
@@ -188,6 +194,9 @@ fun BalloonGameScreen(
     var gamePaused by rememberSaveable { mutableStateOf(false) }
     var balloonView by remember { mutableStateOf<BalloonView?>(null) }
     var showExitDialog by rememberSaveable { mutableStateOf(false) }
+    var currentScore by remember { mutableStateOf(0) }
+    var currentHighScore by remember { mutableStateOf(0) }
+    var showNewHighScoreMessage by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = MusicLifecycleObserver(mediaPlayer)
@@ -195,10 +204,18 @@ fun BalloonGameScreen(
 
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            balloonView?.saveHighScore()
         }
     }
 
-    // Handle back press to show exit dialog
+    LaunchedEffect(showNewHighScoreMessage) {
+        if (showNewHighScoreMessage) {
+            delay(1000) // Show message for 1 second
+            showNewHighScoreMessage = false
+        }
+    }
+
+
     BackHandler(onBack = {
         showExitDialog = true
         gamePaused = true
@@ -210,7 +227,10 @@ fun BalloonGameScreen(
         AndroidView(
             factory = {
                 BalloonView(context).apply {
-                    this.onGameOver = onGameOver
+                    this.onGameOver = {
+                        saveHighScore()
+                        onGameOver()
+                    }
                     this.onPause = {
                         gamePaused = true
                         onPause()
@@ -218,6 +238,24 @@ fun BalloonGameScreen(
                     this.onResume = {
                         gamePaused = false
                         onResume()
+                    }
+
+                    this.gameStateListener = object : GameStateListener {
+                        override fun onScoreChanged(newScore: Int) {
+                            currentScore = newScore
+                        }
+                        override fun onHighScoreChanged(newHighScore: Int) {
+                            currentHighScore = newHighScore
+                        }
+                        override fun onNewHighScore(newHighScore: Int) {
+                            currentHighScore = newHighScore
+                            showNewHighScoreMessage = true
+                        }
+                        override fun onGameOver() {
+                            saveHighScore()
+                            onGameOver()
+                        }
+
                     }
                     balloonView = this
                     resetGame()
@@ -242,7 +280,7 @@ fun BalloonGameScreen(
                         gamePaused = false
                         (context as? Activity)?.finish()
                     }) {
-                        Text("yes")
+                        Text("Yes")
                     }
                 },
                 dismissButton = {
@@ -252,7 +290,7 @@ fun BalloonGameScreen(
                         balloonView?.resumeGame()
                         onResume()
                     }) {
-                        Text("no")
+                        Text("No")
                     }
                 }
             )
@@ -288,6 +326,26 @@ fun BalloonGameScreen(
                 .padding(16.dp)
         ) {
             Text("Settings")
+        }
+
+        // Display score and high score
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(16.dp)
+        ) {
+        }
+
+        // Display new high score message
+        if (showNewHighScoreMessage) {
+            Text(
+                "NEW HIGH SCORE!",
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(16.dp),
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.Red
+            )
         }
     }
 }
