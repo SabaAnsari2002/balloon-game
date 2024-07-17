@@ -237,6 +237,7 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     private var speed = 10 // Initial speed
     private var lastSpeedChangeTime = System.currentTimeMillis()
     private var missedBalloonsCount = 0 // Count of missed balloons
+    private var pausedSpeed = speed
     var onGameOver: (() -> Unit)? = null // Callback function for game over
     var onPause: (() -> Unit)? = null // Callback function for pausing the game
     var onResume: (() -> Unit)? = null // Callback function for resuming the game
@@ -275,16 +276,24 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     }
 
     fun pauseGame() {
-        isGameRunning = false
-        isGamePaused = true
-        handler.removeCallbacks(updateRunnable)
+        if (isGameRunning) {
+            isGameRunning = false
+            isGamePaused = true
+            pausedSpeed = speed // Save the current speed
+            handler.removeCallbacks(updateRunnable)
+            onPause?.invoke()
+        }
     }
 
     fun resumeGame() {
-        isGameRunning = true
-        isGamePaused = false
-        handler.post(updateRunnable)
-        addBalloonWithDelay()
+        if (isGamePaused) {
+            isGameRunning = true
+            isGamePaused = false
+            speed = pausedSpeed // Restore the speed
+            handler.post(updateRunnable)
+            addBalloonWithDelay()
+            onResume?.invoke()
+        }
     }
 
     private val updateRunnable = object : Runnable {
@@ -310,7 +319,7 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             }
             balloons.removeAll(balloonsToRemove)
 
-            // Increase speed every 15 seconds
+            // Increase speed every 10 seconds
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastSpeedChangeTime >= 10000) {
                 speed += 4 // Increase speed
@@ -328,7 +337,7 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
                 balloons.add(generateRandomBalloon())
                 addBalloonWithDelay()
             }
-        }, Random.nextLong(300, 1000)) // Random delay between 0.3 to 1 second
+        }, Random.nextLong(300, 800)) // Random delay between 0.3 to 0.8 second
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -377,7 +386,8 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
         isGameRunning = false
         handler.removeCallbacksAndMessages(null)
         score = 0
-        speed = 10
+        speed = 10 // Initial speed
+        pausedSpeed = speed
         missedBalloonsCount = 0
         balloons.clear()
         // Ensure view is measured
