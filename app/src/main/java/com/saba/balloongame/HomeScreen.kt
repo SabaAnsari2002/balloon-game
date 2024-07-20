@@ -26,7 +26,9 @@ fun HomeScreen(onStartClick: () -> Unit) {
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(Color(0xFF4568DC), Color(0xFFB06AB3))
+                    colors = listOf(androidx.compose.ui.graphics.Color(0xFF4568DC),
+                        androidx.compose.ui.graphics.Color(0xFFB06AB3)
+                    )
                 )
             )
     ) {
