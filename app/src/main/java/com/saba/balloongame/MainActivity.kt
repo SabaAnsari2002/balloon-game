@@ -13,8 +13,9 @@ import com.saba.balloongame.ui.theme.BalloonGameTheme
 import kotlinx.coroutines.delay
 class MainActivity : ComponentActivity() {
     private lateinit var mediaPlayer: MediaPlayer
-    private var isMusicPlaying by mutableStateOf(false) // متغیر برای ذخیره وضعیت پخش موسیقی
-    private var isMuted by mutableStateOf(false) // وضعیت سراسری برای حالت میوت
+    private lateinit var gameOverMediaPlayer: MediaPlayer
+    private var isMusicPlaying by mutableStateOf(false)
+    private var isMuted by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,8 +30,9 @@ class MainActivity : ComponentActivity() {
                     showSplashScreen = false
                 }
 
-                // Initialize media player
+                // Initialize media players
                 mediaPlayer = MediaPlayer.create(this, R.raw.gamesound)
+                gameOverMediaPlayer = MediaPlayer.create(this, R.raw.gameover)
                 mediaPlayer.isLooping = true
 
                 Surface(
@@ -43,7 +45,7 @@ class MainActivity : ComponentActivity() {
                             gameOver = false
                             startGame = true
                             if (!isMuted) {
-                                mediaPlayer.start() // Start music
+                                mediaPlayer.start()
                                 isMusicPlaying = true
                             }
                         })
@@ -51,16 +53,17 @@ class MainActivity : ComponentActivity() {
                             onGameOver = {
                                 gameOver = true
                                 startGame = false
-                                mediaPlayer.pause() // Pause music
+                                mediaPlayer.pause() // Pause current music
+                                gameOverMediaPlayer.start() // Start game over music
                                 isMusicPlaying = false
                             },
                             onPause = {
-                                mediaPlayer.pause() // Pause music
+                                mediaPlayer.pause() // Pause current music
                                 isMusicPlaying = false
                             },
                             onResume = {
                                 if (!isMuted) {
-                                    mediaPlayer.start() // Resume music only if not muted
+                                    mediaPlayer.start() // Resume current music only if not muted
                                     isMusicPlaying = true
                                 }
                             },
@@ -94,5 +97,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         mediaPlayer.release()
+        gameOverMediaPlayer.release()
     }
 }
