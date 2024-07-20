@@ -215,7 +215,6 @@
 
 
 
-
 package com.saba.balloongame
 
 import android.content.Context
@@ -226,6 +225,13 @@ import android.view.MotionEvent
 import android.view.View
 import kotlin.random.Random
 
+interface GameStateListener {
+    fun onScoreChanged(newScore: Int)
+    fun onHighScoreChanged(newHighScore: Int)
+    fun onNewHighScore(newHighScore: Int)
+    fun onGameOver()
+}
+
 class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
     private val balloons = mutableListOf<Balloon>()
@@ -234,12 +240,19 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
         isAntiAlias = true
     }
     private var score = 0
+    private var highScore = 0
     private var speed = 10 // Initial speed
     private var lastSpeedChangeTime = System.currentTimeMillis()
     private var missedBalloonsCount = 0 // Count of missed balloons
+    private var pausedSpeed = speed
     var onGameOver: (() -> Unit)? = null // Callback function for game over
     var onPause: (() -> Unit)? = null // Callback function for pausing the game
     var onResume: (() -> Unit)? = null // Callback function for resuming the game
+    var gameStateListener: GameStateListener? = null
+    private var isFirstGame = true
+    private var hasShownHighScoreMessage = false
+
+    private val sharedPreferences = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
 
     // Load the balloon images
     private val balloonBitmaps = listOf(
@@ -251,11 +264,8 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
         BitmapFactory.decodeResource(resources, R.drawable.balloon6),
         BitmapFactory.decodeResource(resources, R.drawable.balloon7),
         BitmapFactory.decodeResource(resources, R.drawable.balloon8),
-
-        // Add more balloon images here
     )
 
-    // Increase balloon size
     private val balloonRadius = 128f
 
     private val handler = Handler()
@@ -264,6 +274,10 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     private val maxBalloons = 20 // Increase maximum number of balloons
 
     init {
+
+        highScore = sharedPreferences.getInt("highScore", 0)
+        isFirstGame = highScore == 0
+
         resetGame()
     }
 
@@ -275,16 +289,24 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     }
 
     fun pauseGame() {
-        isGameRunning = false
-        isGamePaused = true
-        handler.removeCallbacks(updateRunnable)
+        if (isGameRunning) {
+            isGameRunning = false
+            isGamePaused = true
+            pausedSpeed = speed
+            handler.removeCallbacks(updateRunnable)
+            onPause?.invoke()
+        }
     }
 
     fun resumeGame() {
-        isGameRunning = true
-        isGamePaused = false
-        handler.post(updateRunnable)
-        addBalloonWithDelay()
+        if (isGamePaused) {
+            isGameRunning = true
+            isGamePaused = false
+            speed = pausedSpeed
+            handler.post(updateRunnable)
+            addBalloonWithDelay()
+            onResume?.invoke()
+        }
     }
 
     private val updateRunnable = object : Runnable {
@@ -292,17 +314,19 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             if (!isGameRunning) return
 
             if (missedBalloonsCount >= 5) {
+                gameStateListener?.onGameOver()
                 onGameOver?.invoke()
                 return
             }
 
             val balloonsToRemove = mutableListOf<Balloon>()
             for (balloon in balloons) {
-                balloon.y -= speed // Balloon movement speed
+                balloon.y -= speed
                 if (balloon.y + balloonRadius < 0) {
                     balloonsToRemove.add(balloon)
                     missedBalloonsCount++
                     if (missedBalloonsCount >= 5) {
+                        gameStateListener?.onGameOver()
                         onGameOver?.invoke()
                         return
                     }
@@ -310,15 +334,14 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             }
             balloons.removeAll(balloonsToRemove)
 
-            // Increase speed every 15 seconds
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastSpeedChangeTime >= 10000) {
-                speed += 4 // Increase speed
+                speed += 4
                 lastSpeedChangeTime = currentTime
             }
 
             invalidate()
-            handler.postDelayed(this, 50) // Update every 50 milliseconds
+            handler.postDelayed(this, 50)
         }
     }
 
@@ -328,12 +351,11 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
                 balloons.add(generateRandomBalloon())
                 addBalloonWithDelay()
             }
-        }, Random.nextLong(300, 1000)) // Random delay between 0.3 to 1 second
+        }, Random.nextLong(300, 800))
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        // Draw balloons
         for (balloon in balloons) {
             val bitmap = balloon.bitmap
             val left = balloon.x - balloonRadius
@@ -342,22 +364,21 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             val bottom = balloon.y + balloonRadius
             canvas.drawBitmap(bitmap, null, RectF(left, top, right, bottom), paint)
         }
-        // Display score and missed balloons count
         paint.color = Color.BLACK
         paint.textSize = 50f
         canvas.drawText("Score: $score", 50f, 50f, paint)
-        canvas.drawText("Missed: $missedBalloonsCount", 50f, 110f, paint)
+        canvas.drawText("High Score: $highScore", 50f, 110f, paint)
+        canvas.drawText("Missed: $missedBalloonsCount", 50f, 170f, paint)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN && !isGamePaused) {
-            // Check for balloon tap
             val iterator = balloons.iterator()
             while (iterator.hasNext()) {
                 val balloon = iterator.next()
                 if (balloon.contains(event.x, event.y, balloonRadius)) {
                     iterator.remove()
-                    score++
+                    updateScore()
                     break
                 }
             }
@@ -366,26 +387,55 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
         return true
     }
 
+    private fun updateScore() {
+        score++
+        gameStateListener?.onScoreChanged(score)
+        if (score > highScore && !isFirstGame && !hasShownHighScoreMessage) {
+            highScore = score
+            sharedPreferences.edit().putInt("highScore", highScore).apply()
+            gameStateListener?.onNewHighScore(highScore)
+            hasShownHighScoreMessage = true
+        }
+        invalidate()
+    }
+
+
     private fun generateRandomBalloon(): Balloon {
         val x = balloonRadius + Random.nextFloat() * (width - 2 * balloonRadius)
-        val y = height.toFloat() + balloonRadius // Enter from bottom of the screen
+        val y = height.toFloat() + balloonRadius
         val bitmap = balloonBitmaps[Random.nextInt(balloonBitmaps.size)]
         return Balloon(x, y, bitmap)
     }
 
     fun resetGame() {
         isGameRunning = false
+        isFirstGame = false
+        hasShownHighScoreMessage = false
         handler.removeCallbacksAndMessages(null)
         score = 0
         speed = 10
+        pausedSpeed = speed
         missedBalloonsCount = 0
         balloons.clear()
-        // Ensure view is measured
+        isFirstGame = false
+        gameStateListener?.onScoreChanged(score)
+        gameStateListener?.onHighScoreChanged(highScore)
         post {
             startGame()
         }
         lastSpeedChangeTime = System.currentTimeMillis()
     }
+
+    fun saveHighScore() {
+        if (score > highScore) {
+            highScore = score
+            sharedPreferences.edit().putInt("highScore", highScore).apply()
+            gameStateListener?.onNewHighScore(highScore)
+        }
+    }
+
+    fun getScore(): Int = score
+    fun getHighScore(): Int = highScore
 
     data class Balloon(var x: Float, var y: Float, val bitmap: Bitmap) {
         fun contains(touchX: Float, touchY: Float, radius: Float): Boolean {
