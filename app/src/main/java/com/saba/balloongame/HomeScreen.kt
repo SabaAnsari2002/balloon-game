@@ -10,8 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics
-.Color
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -24,13 +23,6 @@ fun HomeScreen(onStartClick: () -> Unit) {
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(androidx.compose.ui.graphics.Color(0xFF4568DC),
-                        androidx.compose.ui.graphics.Color(0xFFB06AB3)
-                    )
-                )
-            )
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,

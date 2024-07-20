@@ -1,6 +1,7 @@
 package com.saba.balloongame
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.*
 import android.os.Handler
 import android.util.AttributeSet
@@ -21,6 +22,11 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     private val paint = Paint().apply {
         style = Paint.Style.FILL
         isAntiAlias = true
+        color = if (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
+            Color.WHITE
+        } else {
+            Color.BLACK
+        }
     }
     private var score = 0
     private var highScore = 0
@@ -64,6 +70,9 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     private var isGamePaused = false
     private val maxBalloons = 20 // Increase maximum number of balloons
 
+    fun Context.isDarkMode(): Boolean {
+        return resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+    }
     init {
         highScore = sharedPreferences.getInt("highScore", 0)
         isFirstGame = highScore == 0
@@ -153,7 +162,7 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             val bottom = balloon.y + balloonRadius
             canvas.drawBitmap(bitmap, null, RectF(left, top, right, bottom), paint)
         }
-        paint.color = Color.BLACK
+        paint.color = if (context.isDarkMode()) Color.WHITE else Color.BLACK
         paint.textSize = 50f
         canvas.drawText("Score: $score", 50f, 50f, paint)
         canvas.drawText("High Score: $highScore", 50f, 110f, paint)

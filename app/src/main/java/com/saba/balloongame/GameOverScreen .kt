@@ -23,11 +23,7 @@ fun GameOverScreen(onRestartClick: () -> Unit) {
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF1E3C72), Color(0xFF2A5298))
-                )
-            )
+
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
