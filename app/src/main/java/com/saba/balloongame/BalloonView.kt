@@ -36,9 +36,6 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     private var hasShownHighScoreMessage = false
     private val sharedPreferences = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
     private var lastGoldenBalloonTime = System.currentTimeMillis()
-    data class ScoreIndicator(val x: Float, val y: Float, val score: Int, var alpha: Int = 255)
-
-    private val scoreIndicators = mutableListOf<ScoreIndicator>()
 
     // Load the balloon images
     private val balloonBitmaps = listOf(
@@ -139,7 +136,6 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
         }, Random.nextLong(300, 800)) // You can adjust these values to change balloon generation frequency
     }
 
-
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         for (balloon in balloons) {
@@ -155,16 +151,7 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
         canvas.drawText("Score: $score", 50f, 50f, paint)
         canvas.drawText("High Score: $highScore", 50f, 110f, paint)
         canvas.drawText("Missed: $missedBalloonsCount", 50f, 170f, paint)
-
-        for (indicator in scoreIndicators) {
-            paint.alpha = indicator.alpha
-            canvas.drawText("+${indicator.score}", indicator.x, indicator.y, paint)
-            indicator.alpha -= 5
-        }
-        scoreIndicators.removeAll { it.alpha <= 0 }
     }
-
-
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN && !isGamePaused) {
@@ -174,7 +161,6 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
                 if (balloon.contains(event.x, event.y, balloonRadius)) {
                     iterator.remove()
                     updateScore(balloon)
-                    scoreIndicators.add(ScoreIndicator(event.x, event.y, balloon.score))
                     break
                 }
             }
@@ -194,6 +180,7 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
         }
         invalidate()
     }
+
     private fun generateRandomBalloon(): Balloon {
         val x = balloonRadius + Random.nextFloat() * (width - 2 * balloonRadius)
         val y = height.toFloat() + balloonRadius
@@ -210,7 +197,6 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
         val score = if (isGolden) 5 else 1
         return Balloon(x, y, bitmap, score)
     }
-
 
     fun resetGame() {
         isGameRunning = false

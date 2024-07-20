@@ -35,6 +35,8 @@ fun BalloonGameScreen(
     onMusicStatusChanged: (Boolean) -> Unit,
     isMuted: Boolean,
     onMuteStatusChanged: (Boolean) -> Unit
+
+
 ) {
     val context = LocalContext.current
     val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
@@ -76,7 +78,7 @@ fun BalloonGameScreen(
                 BalloonView(context).apply {
                     this.onGameOver = {
                         saveHighScore()
-                        onGameOver()
+                        onGameOver() // صدا زدن onGameOver برای تغییر آهنگ
                     }
                     this.onPause = {
                         gamePaused = true
