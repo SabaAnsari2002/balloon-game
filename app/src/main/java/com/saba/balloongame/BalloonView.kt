@@ -1,6 +1,7 @@
 package com.saba.balloongame
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.*
 import android.os.Handler
 import android.util.AttributeSet
@@ -21,6 +22,11 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     private val paint = Paint().apply {
         style = Paint.Style.FILL
         isAntiAlias = true
+        color = if (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
+            Color.WHITE
+        } else {
+            Color.BLACK
+        }
     }
     private var score = 0
     private var highScore = 0
@@ -36,6 +42,13 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     private var hasShownHighScoreMessage = false
     private val sharedPreferences = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
     private var lastGoldenBalloonTime = System.currentTimeMillis()
+
+    // برای پیگیری ترکاندن بادکنک‌های مشابه
+    private var lastPoppedBalloonType: Int? = null
+    private var consecutivePops = 0
+
+    // آخرین امتیاز افزوده شده
+    private var lastAddedScore = 0
 
     // Load the balloon images
     private val balloonBitmaps = listOf(
@@ -57,6 +70,9 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     private var isGamePaused = false
     private val maxBalloons = 20 // Increase maximum number of balloons
 
+    fun Context.isDarkMode(): Boolean {
+        return resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+    }
     init {
         highScore = sharedPreferences.getInt("highScore", 0)
         isFirstGame = highScore == 0
@@ -117,7 +133,7 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             balloons.removeAll(balloonsToRemove)
 
             val currentTime = System.currentTimeMillis()
-            if (currentTime - lastSpeedChangeTime >=5000) {
+            if (currentTime - lastSpeedChangeTime >= 5000) {
                 speed += 2
                 lastSpeedChangeTime = currentTime
             }
@@ -146,11 +162,12 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             val bottom = balloon.y + balloonRadius
             canvas.drawBitmap(bitmap, null, RectF(left, top, right, bottom), paint)
         }
-        paint.color = Color.BLACK
+        paint.color = if (context.isDarkMode()) Color.WHITE else Color.BLACK
         paint.textSize = 50f
         canvas.drawText("Score: $score", 50f, 50f, paint)
         canvas.drawText("High Score: $highScore", 50f, 110f, paint)
         canvas.drawText("Missed: $missedBalloonsCount", 50f, 170f, paint)
+        canvas.drawText("Last Added: $lastAddedScore", 50f, 230f, paint) // رسم امتیاز آخرین بادکنک ترکیده
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -170,7 +187,21 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     }
 
     private fun updateScore(balloon: Balloon) {
-        score += balloon.score
+        // اگر بادکنک طلایی باشد
+        if (balloon.isGolden) {
+            lastAddedScore = 5
+        } else {
+            // بررسی ترکاندن بادکنک مشابه
+            if (lastPoppedBalloonType == balloon.type) {
+                consecutivePops++
+            } else {
+                lastPoppedBalloonType = balloon.type
+                consecutivePops = 1
+            }
+            lastAddedScore = consecutivePops
+        }
+
+        score += lastAddedScore
         gameStateListener?.onScoreChanged(score)
         if (score > highScore && !isFirstGame && !hasShownHighScoreMessage) {
             highScore = score
@@ -189,13 +220,9 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
         if (isGolden) {
             lastGoldenBalloonTime = currentTime
         }
-        val bitmap = if (isGolden) {
-            balloonBitmaps.last() // Golden balloon image
-        } else {
-            balloonBitmaps[Random.nextInt(balloonBitmaps.size - 1)]
-        }
-        val score = if (isGolden) 5 else 1
-        return Balloon(x, y, bitmap, score)
+        val type = if (isGolden) 8 else Random.nextInt(8)
+        val bitmap = balloonBitmaps[type]
+        return Balloon(x, y, bitmap, isGolden, type)
     }
 
     fun resetGame() {
@@ -208,7 +235,10 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
         pausedSpeed = speed
         missedBalloonsCount = 0
         balloons.clear()
+        lastPoppedBalloonType = null
+        consecutivePops = 0
         isFirstGame = false
+        lastAddedScore = 0
         gameStateListener?.onScoreChanged(score)
         gameStateListener?.onHighScoreChanged(highScore)
         post {
@@ -228,10 +258,16 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     fun getScore(): Int = score
     fun getHighScore(): Int = highScore
 
-    data class Balloon(var x: Float, var y: Float, val bitmap: Bitmap, val score: Int) {
+    data class Balloon(
+        var x: Float,
+        var y: Float,
+        val bitmap: Bitmap,
+        val isGolden: Boolean = false,
+        val type: Int
+    ) {
         fun contains(touchX: Float, touchY: Float, radius: Float): Boolean {
-            val dx = touchX - x
-            val dy = touchY - y
+            val dx = x - touchX
+            val dy = y - touchY
             return dx * dx + dy * dy <= radius * radius
         }
     }
