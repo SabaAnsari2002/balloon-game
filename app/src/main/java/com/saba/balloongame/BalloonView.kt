@@ -7,6 +7,7 @@ import android.os.Handler
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.content.res.ResourcesCompat
 import kotlin.random.Random
 
 interface GameStateListener {
@@ -28,7 +29,7 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             Color.BLACK
         }
     }
-    private var score = 0
+    private var score: Int = 0
     private var highScore = 0
     private var speed = 10 // Initial speed
     private var lastSpeedChangeTime = System.currentTimeMillis()
@@ -73,6 +74,10 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
     fun Context.isDarkMode(): Boolean {
         return resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
     }
+
+    // Load custom font
+    private val customFont = ResourcesCompat.getFont(context, R.font.luckiestguy)
+
     init {
         highScore = sharedPreferences.getInt("highScore", 0)
         isFirstGame = highScore == 0
@@ -162,8 +167,13 @@ class BalloonView(context: Context, attrs: AttributeSet? = null) : View(context,
             val bottom = balloon.y + balloonRadius
             canvas.drawBitmap(bitmap, null, RectF(left, top, right, bottom), paint)
         }
-        paint.color = if (context.isDarkMode()) Color.WHITE else Color.BLACK
-        paint.textSize = 50f
+
+        paint.apply {
+            color = if (context.isDarkMode()) Color.WHITE else Color.BLACK
+            textSize = 50f
+            typeface = customFont
+        }
+
         canvas.drawText("Score: $score", 50f, 50f, paint)
         canvas.drawText("High Score: $highScore", 50f, 110f, paint)
         canvas.drawText("Missed: $missedBalloonsCount", 50f, 170f, paint)

@@ -14,6 +14,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.LifecycleOwner
@@ -24,6 +26,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role.Companion.Image
 import kotlinx.coroutines.delay
 
 @Composable
@@ -34,9 +38,8 @@ fun BalloonGameScreen(
     mediaPlayer: MediaPlayer,
     onMusicStatusChanged: (Boolean) -> Unit,
     isMuted: Boolean,
-    onMuteStatusChanged: (Boolean) -> Unit
-
-
+    onMuteStatusChanged: (Boolean) -> Unit,
+    balloonViewRef: (BalloonView?) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
@@ -63,7 +66,6 @@ fun BalloonGameScreen(
             showNewHighScoreMessage = false
         }
     }
-
 
     BackHandler(onBack = {
         showExitDialog = true
@@ -104,9 +106,9 @@ fun BalloonGameScreen(
                             saveHighScore()
                             onGameOver()
                         }
-
                     }
                     balloonView = this
+                    balloonViewRef(this)
                     resetGame()
                 }
             },
@@ -164,18 +166,19 @@ fun BalloonGameScreen(
             )
         }
 
-        Button(
-            onClick = {
-                gamePaused = true
-                balloonView?.pauseGame()
-                onPause()
-            },
+        Image(
+            painter = painterResource(id = R.drawable.settings_icon),
+            contentDescription = "Settings",
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(16.dp)
-        ) {
-            Text("Settings")
-        }
+                .size(58.dp) // Adjust the size as needed
+                .clickable {
+                    gamePaused = true
+                    balloonView?.pauseGame()
+                    onPause()
+                }
+        )
 
         // Display score and high score
         Column(
@@ -183,6 +186,7 @@ fun BalloonGameScreen(
                 .align(Alignment.TopStart)
                 .padding(16.dp)
         ) {
+
         }
 
         // Display new high score message
