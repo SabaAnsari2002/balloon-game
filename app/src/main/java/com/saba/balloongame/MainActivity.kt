@@ -1,29 +1,33 @@
 package com.saba.balloongame
 
+import HomeScreen
 import android.media.MediaPlayer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.saba.balloongame.ui.theme.BalloonGameTheme
 import kotlinx.coroutines.delay
+
 class MainActivity : ComponentActivity() {
     private lateinit var mediaPlayer: MediaPlayer
     private lateinit var gameOverMediaPlayer: MediaPlayer
     private var isMusicPlaying by mutableStateOf(false)
     private var isMuted by mutableStateOf(false)
+    private var currentScore by mutableStateOf(0)
+    private var gameOver by mutableStateOf(false)
+    private var startGame by mutableStateOf(false)
+    private var balloonView: BalloonView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             BalloonGameTheme {
                 var showSplashScreen by remember { mutableStateOf(true) }
-                var startGame by remember { mutableStateOf(false) }
-                var gameOver by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
                     delay(3000)
@@ -31,9 +35,10 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // Initialize media players
-                mediaPlayer = MediaPlayer.create(this, R.raw.gamesound)
+                mediaPlayer = MediaPlayer.create(this, R.raw.gamesound).apply {
+                    isLooping = true
+                }
                 gameOverMediaPlayer = MediaPlayer.create(this, R.raw.gameover)
-                mediaPlayer.isLooping = true
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -41,7 +46,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     when {
                         showSplashScreen -> SplashScreen()
-                        gameOver -> GameOverScreen(onRestartClick = {
+                        gameOver -> GameOverScreen(score = currentScore, onRestartClick = {
                             gameOver = false
                             startGame = true
                             if (!isMuted) {
@@ -51,19 +56,20 @@ class MainActivity : ComponentActivity() {
                         })
                         startGame -> BalloonGameScreen(
                             onGameOver = {
+                                currentScore = balloonView?.getScore() ?: 0
                                 gameOver = true
                                 startGame = false
-                                mediaPlayer.pause() // Pause current music
-                                gameOverMediaPlayer.start() // Start game over music
+                                mediaPlayer.pause()
+                                gameOverMediaPlayer.start()
                                 isMusicPlaying = false
                             },
                             onPause = {
-                                mediaPlayer.pause() // Pause current music
+                                mediaPlayer.pause()
                                 isMusicPlaying = false
                             },
                             onResume = {
                                 if (!isMuted) {
-                                    mediaPlayer.start() // Resume current music only if not muted
+                                    mediaPlayer.start()
                                     isMusicPlaying = true
                                 }
                             },
@@ -79,12 +85,13 @@ class MainActivity : ComponentActivity() {
                                 } else if (isMusicPlaying) {
                                     mediaPlayer.start()
                                 }
-                            }
+                            },
+                            balloonViewRef = { balloonView = it }
                         )
                         else -> HomeScreen(onStartClick = {
                             startGame = true
                             if (!isMuted) {
-                                mediaPlayer.start() // Start music
+                                mediaPlayer.start()
                                 isMusicPlaying = true
                             }
                         })
